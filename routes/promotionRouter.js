@@ -27,7 +27,7 @@ promotionRoute
     }
   })
 
-  .post(async (req, res, next) => {
+  .post(authenticate.verifyUser, async (req, res, next) => {
     const { name, image, label, price, featured, description } = req.body;
     try {
       const promotion = await Promotion.create({
@@ -50,11 +50,11 @@ promotionRoute
       return res.send("Something went wrong", error.message);
     }
   })
-  .put((req, res, next) => {
+  .put(authenticate.verifyUser, (req, res, next) => {
     res.statusCode = 403;
     res.end("PUT operation not supported on /promotions");
   })
-  .delete(async (req, res, next) => {
+  .delete(authenticate.verifyUser, async (req, res, next) => {
     try {
       const promotions = await Promotion.remove({});
       res.setHeader("Content-Type", "application/json");
@@ -83,11 +83,11 @@ promotionRoute
       return res.send("Something went wrong", error.message);
     }
   })
-  .post((req, res, next) => {
+  .post(authenticate.verifyUser, (req, res, next) => {
     res.statusCode = 403;
     res.end("POST operation is not supported for this route address");
   })
-  .put(async (req, res, next) => {
+  .put(authenticate.verifyUser, async (req, res, next) => {
     try {
       const promotion = await Promotion.findByIdAndUpdate(
         req.params.promotionId,
@@ -104,7 +104,7 @@ promotionRoute
       return res.send("Something went wrong", error.message);
     }
   })
-  .delete(async (req, res, next) => {
+  .delete(authenticate.verifyUser, async (req, res, next) => {
     try {
       const promotion = await Promotion.findByIdAndRemove(
         req.params.promotionId
