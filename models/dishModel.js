@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 //const Currency = mongoose.Types.Currency;
 // const validator = require('validator');
 
-commentSchema = new mongoose.Schema(
+const commentSchema = new Schema(
   {
     rating: {
       type: Number,
@@ -15,8 +15,8 @@ commentSchema = new mongoose.Schema(
       required: true,
     },
     author: {
-      type: String,
-      required: true,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
     },
   },
   {
