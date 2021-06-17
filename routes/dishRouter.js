@@ -1,123 +1,124 @@
 const express = require("express");
-const Dish = require("../models/dishModel");
-var authenticate = require("../authenticate");
+const bodyParser = require("body-parser");
+const mongoose = require("mongoose");
+const authenticate = require("../authenticate");
+
+const Dishes = require("../models/dishes");
 
 const dishRouter = express.Router();
-dishRouter.use(express.json());
-dishRouter.use(
-  express.urlencoded({
-    extended: true,
-  })
-);
+
+dishRouter.use(bodyParser.json());
 
 dishRouter
   .route("/")
-  .all((req, res, next) => {
-    res.statusCode = 200;
-    res.setHeader("Content-Type", "text/plain");
-    next();
+  .get((req, res, next) => {
+    Dishes.find({})
+      .populate("comments.author")
+      .then(
+        (dishes) => {
+          res.statusCode = 200;
+          res.setHeader("Content-Type", "application/json");
+          res.json(dishes);
+        },
+        (err) => next(err)
+      )
+      .catch((err) => next(err));
   })
-  .get(async (req, res, next) => {
-    try {
-      const dishes = await Dish.find({}).populate("comments.author");
-      res.setHeader("Content-Type", "application/json");
-      return res.json(dishes);
-    } catch (error) {
-      res.statusCode = 404;
-      return res.send("Something went wrong", error.message);
-    }
+
+  .post(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
+    Dishes.create(req.body)
+      .then(
+        (dish) => {
+          res.statusCode = 201;
+          res.setHeader("Content-Type", "application/json");
+          res.json(dish);
+          console.log("Dish Created");
+        },
+        (err) => next(err)
+      )
+      .catch((err) => next(err));
   })
-  .post(authenticate.verifyUser, async (req, res, next) => {
-    const { name, image, category, label, price, featured, description } =
-      req.body;
-    try {
-      const dish = await Dish.create({
-        name,
-        image,
-        category,
-        label,
-        price,
-        featured,
-        description,
-      });
-      if (dish) {
-        res.statusCode = 201;
-        res.setHeader("Content-Type", "application/json");
-        return res.json(dish);
-      }
-    } catch (error) {
-      res.statusCode = 500;
-      res.setHeader("Content-Type", "text/plain");
-      return res.send("Something went wrong", error.message);
-    }
-  })
-  .put(authenticate.verifyUser, (req, res, next) => {
+
+  .put(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
     res.statusCode = 403;
-    res.end("PUT operation not supported on /dishes");
+    res.end("PUT operation is not supported on /dishes");
   })
-  .delete(authenticate.verifyUser, async (req, res, next) => {
-    try {
-      const dishes = await Dish.remove({});
-      res.setHeader("Content-Type", "application/json");
-      return res.json(dishes);
-    } catch (error) {
-      res.statusCode = 404;
-      res.setHeader("Content-Type", "application/json");
-      return res.send("Something went wrong", error.message);
+
+  .delete(
+    authenticate.verifyUser,
+    authenticate.verifyAdmin,
+    (req, res, next) => {
+      Dishes.remove({})
+        .then(
+          (result) => {
+            res.statusCode = 200;
+            res.setHeader("Content-Type", "application/json");
+            res.json(result);
+          },
+          (err) => next(err)
+        )
+        .catch((err) => next(err));
     }
-  });
+  );
 
 dishRouter
   .route("/:dishId")
-  .all((req, res, next) => {
-    res.statusCode = 200;
-    res.setHeader("Content-Type", "text/plain");
-    next();
-  })
-  .get(async (req, res, next) => {
-    try {
-      const dish = await Dish.findById(req.params.dishId).populate(
-        "comments.author"
-      );
-      res.setHeader("Content-Type", "application/json");
-      return res.json(dish);
-    } catch (error) {
-      res.statusCode = 404;
-      return res.send("Something went wrong", error.message);
-    }
-  })
-  .post(authenticate.verifyUser, (req, res, next) => {
-    res.statusCode = 403;
-    res.end("POST operation is not supprte for this route address");
-  })
-  .put(authenticate.verifyUser, async (req, res, next) => {
-    try {
-      const dish = await Dish.findByIdAndUpdate(
-        req.params.dishId,
-        {
-          $set: req.body,
+  .get((req, res, next) => {
+    Dishes.findById(req.params.dishId)
+      .populate("comments.author")
+      .then(
+        (dishes) => {
+          res.statusCode = 200;
+          res.setHeader("Content-Type", "application/json");
+          res.json(dishes);
         },
-        { new: true }
-      );
-      res.statusCode = 200;
-      res.setHeader("Content-Type", "application/json");
-      res.json(dish);
-    } catch (error) {
-      res.statusCode = 404;
-      return res.send("Something went wrong", error.message);
-    }
+        (err) => next(err)
+      )
+      .catch((err) => next(err));
   })
-  .delete(authenticate.verifyUser, async (req, res, next) => {
-    try {
-      const dish = await Dish.findByIdAndRemove(req.params.dishId);
-      res.statusCode = 200;
-      res.setHeader("Content-Type", "application/json");
-      res.json(dish);
-    } catch (error) {
-      res.statusCode = 404;
-      return res.send("Something went wrong", error.message);
+
+  .post(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
+    res.statusCode = 403;
+    res.end("POST operation is not supported on /dishes/" + req.params.dishId);
+  })
+
+  .put(authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
+    Dishes.findByIdAndUpdate(
+      req.params.dishId,
+      {
+        $set: req.body,
+      },
+      {
+        new: true,
+      }
+    )
+      .then(
+        (dish) => {
+          res.statusCode = 200;
+          res.setHeader("Content-Type", "application/json");
+          res.json(dish);
+        },
+        (err) => next(err)
+      )
+      .catch((err) => next(err));
+  })
+
+  .delete(
+    authenticate.verifyUser,
+    authenticate.verifyAdmin,
+    (req, res, next) => {
+      Dishes.findByIdAndRemove(req.params.dishId)
+        .then(
+          (result) => {
+            res.statusCode = 200;
+            res.setHeader("Content-Type", "application/json");
+            res.json(result);
+          },
+          (err) => next(err)
+        )
+        .catch((err) => next(err));
     }
-  });
+  );
 
 dishRouter
   .route("/:dishId/comments")
@@ -140,6 +141,7 @@ dishRouter
       )
       .catch((err) => next(err));
   })
+
   .post(authenticate.verifyUser, (req, res, next) => {
     Dishes.findById(req.params.dishId)
       .then(
@@ -147,18 +149,17 @@ dishRouter
           if (dish != null) {
             req.body.author = req.user._id;
             dish.comments.push(req.body);
-            dish.save().then(
-              (dish) => {
-                Dishes.findById(dish._id)
-                  .populate("comments.author")
-                  .then((dish) => {
-                    res.statusCode = 200;
-                    res.setHeader("Content-Type", "application/json");
-                    res.json(dish);
-                  });
-              },
-              (err) => next(err)
-            );
+            dish
+              .save()
+              .then(
+                (dish) => {
+                  res.statusCode = 200;
+                  res.setHeader("Content-Type", "application/json");
+                  res.json(dish);
+                },
+                (err) => next(err)
+              )
+              .catch((err) => next(err));
           } else {
             err = new Error("Dish " + req.params.dishId + " not found");
             err.status = 404;
@@ -169,40 +170,50 @@ dishRouter
       )
       .catch((err) => next(err));
   })
+
   .put(authenticate.verifyUser, (req, res, next) => {
     res.statusCode = 403;
     res.end(
-      "PUT operation not supported on /dishes/" +
+      "PUT operation is not supported on /dishes/" +
         req.params.dishId +
         "/comments"
     );
   })
-  .delete(authenticate.verifyUser, (req, res, next) => {
-    Dishes.findById(req.params.dishId)
-      .then(
-        (dish) => {
-          if (dish != null) {
-            for (var i = dish.comments.length - 1; i >= 0; i--) {
-              dish.comments.id(dish.comments[i]._id).remove();
+
+  .delete(
+    authenticate.verifyUser,
+    authenticate.verifyAdmin,
+    (req, res, next) => {
+      Dishes.findById(req.params.dishId)
+        .then(
+          (dish) => {
+            if (dish != null) {
+              console.log(dish);
+              for (var i = dish.comments.length - 1; i >= 0; i--) {
+                dish.comments.id(dish.comments[i]._id).remove();
+              }
+              dish
+                .save()
+                .then(
+                  (dish) => {
+                    res.statusCode = 200;
+                    res.setHeader("Content-Type", "application/json");
+                    res.json(dish);
+                  },
+                  (err) => next(err)
+                )
+                .catch((err) => next(err));
+            } else {
+              err = new Error("Dish " + req.params.dishId + " not found");
+              err.status = 404;
+              return next(err);
             }
-            dish.save().then(
-              (dish) => {
-                res.statusCode = 200;
-                res.setHeader("Content-Type", "application/json");
-                res.json(dish);
-              },
-              (err) => next(err)
-            );
-          } else {
-            err = new Error("Dish " + req.params.dishId + " not found");
-            err.status = 404;
-            return next(err);
-          }
-        },
-        (err) => next(err)
-      )
-      .catch((err) => next(err));
-  });
+          },
+          (err) => next(err)
+        )
+        .catch((err) => next(err));
+    }
+  );
 
 dishRouter
   .route("/:dishId/comments/:commentId")
@@ -211,7 +222,7 @@ dishRouter
       .populate("comments.author")
       .then(
         (dish) => {
-          if (dish != null && dish.comments.id(req.params.commentId) != null) {
+          if (dish != null && dish.comments.id(req.params.commentId)) {
             res.statusCode = 200;
             res.setHeader("Content-Type", "application/json");
             res.json(dish.comments.id(req.params.commentId));
@@ -229,38 +240,48 @@ dishRouter
       )
       .catch((err) => next(err));
   })
+
   .post(authenticate.verifyUser, (req, res, next) => {
     res.statusCode = 403;
     res.end(
-      "POST operation not supported on /dishes/" +
+      "POST operation is not supported on /dishes/" +
         req.params.dishId +
         "/comments/" +
         req.params.commentId
     );
   })
-  .put(cors.corsWithOptions, authenticate.verifyUser, (req, res, next) => {
+
+  .put(authenticate.verifyUser, (req, res, next) => {
     Dishes.findById(req.params.dishId)
       .then(
         (dish) => {
-          if (dish != null && dish.comments.id(req.params.commentId) != null) {
+          if (dish != null && dish.comments.id(req.params.commentId)) {
+            if (
+              dish.comments.id(req.params.commentId).author.toString() !=
+              req.user._id.toString()
+            ) {
+              err = new Error("You are not authorized to edit this comment");
+              err.status = 403;
+              return next(err);
+            }
             if (req.body.rating) {
               dish.comments.id(req.params.commentId).rating = req.body.rating;
             }
+
             if (req.body.comment) {
               dish.comments.id(req.params.commentId).comment = req.body.comment;
             }
-            dish.save().then(
-              (dish) => {
-                Dishes.findById(dish._id)
-                  .populate("comments.author")
-                  .then((dish) => {
-                    res.statusCode = 200;
-                    res.setHeader("Content-Type", "application/json");
-                    res.json(dish);
-                  });
-              },
-              (err) => next(err)
-            );
+            dish
+              .save()
+              .then(
+                (dish) => {
+                  res.statusCode = 200;
+                  res.setHeader("Content-Type", "application/json");
+                  res.json(dish);
+                },
+                (err) => next(err)
+              )
+              .catch((err) => next(err));
           } else if (dish == null) {
             err = new Error("Dish " + req.params.dishId + " not found");
             err.status = 404;
@@ -275,24 +296,32 @@ dishRouter
       )
       .catch((err) => next(err));
   })
-  .delete(cors.corsWithOptions, authenticate.verifyUser, (req, res, next) => {
+
+  .delete(authenticate.verifyUser, (req, res, next) => {
     Dishes.findById(req.params.dishId)
       .then(
         (dish) => {
-          if (dish != null && dish.comments.id(req.params.commentId) != null) {
+          if (dish != null && dish.comments.id(req.params.commentId)) {
+            if (
+              dish.comments.id(req.params.commentId).author.toString() !=
+              req.user._id.toString()
+            ) {
+              err = new Error("You are not authorized to edit this comment");
+              err.status = 403;
+              return next(err);
+            }
             dish.comments.id(req.params.commentId).remove();
-            dish.save().then(
-              (dish) => {
-                Dishes.findById(dish._id)
-                  .populate("comments.author")
-                  .then((dish) => {
-                    res.statusCode = 200;
-                    res.setHeader("Content-Type", "application/json");
-                    res.json(dish);
-                  });
-              },
-              (err) => next(err)
-            );
+            dish
+              .save()
+              .then(
+                (dish) => {
+                  res.statusCode = 200;
+                  res.setHeader("Content-Type", "application/json");
+                  res.json(dish);
+                },
+                (err) => next(err)
+              )
+              .catch((err) => next(err));
           } else if (dish == null) {
             err = new Error("Dish " + req.params.dishId + " not found");
             err.status = 404;
