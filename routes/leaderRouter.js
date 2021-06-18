@@ -1,6 +1,7 @@
 const express = require("express");
 const Leader = require("../models/leaderModel");
 const leaderRoute = express.Router();
+const cors = require("./cors");
 
 leaderRoute.use(express.json());
 leaderRoute.use(
@@ -11,12 +12,15 @@ leaderRoute.use(
 
 leaderRoute
   .route("/")
+  .options(cors.corsWithOptions, (req, res) => {
+    res.sendStatus(200);
+  })
   .all((req, res, next) => {
     res.statusCode = 200;
     res.setHeader("Content-Type", "text/plain");
     next();
   })
-  .get(async (req, res, next) => {
+  .get(cors.cors, async (req, res, next) => {
     try {
       const leaders = await Leader.find({});
       res.setHeader("Content-Type", "application/json");
@@ -26,7 +30,7 @@ leaderRoute
       return res.send("Something went wrong", error.message);
     }
   })
-  .post(async (req, res, next) => {
+  .post(cors.corsWithOptions, async (req, res, next) => {
     const { name, image, description, designation, abbr, featured } = req.body;
     try {
       const leader = await Leader.create({
@@ -53,7 +57,7 @@ leaderRoute
     res.statusCode = 403;
     res.end("PUT operation not supported on /leaders");
   })
-  .delete(async (req, res, next) => {
+  .delete(cors.corsWithOptions, async (req, res, next) => {
     try {
       const leaders = await Leader.remove({});
       res.setHeader("Content-Type", "application/json");
@@ -67,12 +71,15 @@ leaderRoute
 
 leaderRoute
   .route("/:leaderId")
+  .options(cors.corsWithOptions, (req, res) => {
+    res.sendStatus(200);
+  })
   .all((req, res, next) => {
     res.statusCode = 200;
     res.setHeader("Content-Type", "text/plain");
     next();
   })
-  .get(async (req, res, next) => {
+  .get(cors.cors, async (req, res, next) => {
     try {
       const leader = await Leader.findById(req.params.leaderId);
       res.setHeader("Content-Type", "application/json");
@@ -82,11 +89,11 @@ leaderRoute
       return res.send("Something went wrong", error.message);
     }
   })
-  .post((req, res, next) => {
+  .post(cors.corsWithOptions, (req, res, next) => {
     res.statusCode = 403;
     res.end("POST operation is not supported for this route address");
   })
-  .put(async (req, res, next) => {
+  .put(cors.corsWithOptions, async (req, res, next) => {
     try {
       const leader = await Leader.findByIdAndUpdate(
         req.params.leaderId,
@@ -103,7 +110,7 @@ leaderRoute
       return res.send("Something went wrong", error.message);
     }
   })
-  .delete(async (req, res, next) => {
+  .delete(cors.corsWithOptions, async (req, res, next) => {
     try {
       const leader = await Leader.findByIdAndRemove(req.params.leaderId);
       res.statusCode = 200;
