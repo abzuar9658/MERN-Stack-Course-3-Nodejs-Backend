@@ -9,6 +9,7 @@ const usersRouter = require("./routes/users");
 const dishRouter = require("./routes/dishRouter");
 const leaderRouter = require("./routes/leaderRouter");
 const promotionRouter = require("./routes/promotionRouter");
+const uploadRouter = require("./routes/uploadRouter");
 var session = require("express-session");
 var passport = require("passport");
 var authenticate = require("./authenticate");
@@ -24,6 +25,16 @@ app.use(express.urlencoded({ extended: false }));
 app.use(express.static(path.join(__dirname, "public")));
 
 // app.use(cookieParser("12345-67890-09876-54321"));
+app.all("*", (req, res, next) => {
+  if (req.secure) {
+    return next();
+  } else {
+    res.redirect(
+      307,
+      "https://" + req.hostname + ":" + app.get("secPort") + req.url
+    );
+  }
+});
 app.use(
   session({
     name: "session-id",
@@ -54,7 +65,7 @@ app.use(auth);
 app.use("/dishes", dishRouter);
 app.use("/leaders", leaderRouter);
 app.use("/promotions", promotionRouter);
-
+app.use("/imageUpload", uploadRouter);
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
   next(createError(404));
